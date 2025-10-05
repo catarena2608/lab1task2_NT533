@@ -1,0 +1,12 @@
+clouds:
+  mycloud:
+    auth:
+      auth_url: https://cloud-identity.uitiot.vn/v3/
+      username: 23521518
+      password: HUI3fBTDLZpIish57Hw6
+      project_name: NT533.Q13-TH1.06
+      user_domain_name: Default
+      project_domain_name: Default
+    region_name: RegionOne
+    interface: public
+    identity_api_version: 3

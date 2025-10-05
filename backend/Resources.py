@@ -1,8 +1,22 @@
 import openstack
+from openstack.config import OpenStackConfig
+import os
 
 def get_connection(cloud="mycloud"):
-    #hàm tạo connection tới OpenStack với cấu hình từ clouds.yaml đặt ở ~/.config/openstack/clouds.yaml
-    return openstack.connect(cloud=cloud)
+    project_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(project_dir, "clouds.yaml")
+
+    if not os.path.exists(config_path):
+        # fallback về mặc định
+        config_path = os.path.expanduser("~/.config/openstack/clouds.yaml")
+
+    config = OpenStackConfig(config_files=[config_path])
+    try:
+        cloud_config = config.get_one(cloud)
+    except Exception as e:
+        raise RuntimeError(f"Không tìm thấy cấu hình cloud '{cloud}' trong {config_path}: {e}")
+
+    return openstack.connection.Connection(config=cloud_config)
 
 def list_vms(cloud="mycloud"):
     conn = get_connection(cloud)
@@ -164,22 +178,21 @@ def add_interface_to_router(router_name, subnet_name, cloud="mycloud"):
 
 def attach_floating_ip(server_name, external_network_name, cloud="mycloud"):
     conn = get_connection(cloud)
-
-    # Tìm server (VM) theo tên
     server = conn.compute.find_server(server_name)
     if not server:
         raise Exception("Không tìm thấy server!")
 
-    # Kiểm tra server đã có Floating IP chưa
+    # kiểm tra đã có floating IP
     for addr_list in server.addresses.values():
         for addr in addr_list:
             if addr.get("OS-EXT-IPS:type") == "floating":
-                return addr["addr"]  # VM đã có floating IP thì trả về luôn
+                return addr["addr"]
 
-    # Tạo hoặc lấy 1 floating IP từ external network
-    fip = conn.network.create_ip(floating_network_id=conn.network.find_network(external_network_name).id)
+    ext_net = conn.network.find_network(external_network_name)
+    if not ext_net:
+        raise Exception("Không tìm thấy external network!")
 
-    # Gắn floating IP vào server
+    fip = conn.network.create_ip(floating_network_id=ext_net.id)
+    # có thể cần dùng server.id hoặc server đối tượng tuỳ API
     conn.compute.add_floating_ip_to_server(server, fip.floating_ip_address)
-
     return fip.floating_ip_address
