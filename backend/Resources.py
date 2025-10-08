@@ -18,7 +18,7 @@ def get_connection(cloud="mycloud"):
 
     return openstack.connection.Connection(config=cloud_config)
 
-def list_vms(cloud="mycloud"):
+def list_vms(cloud="mycloud"): 
     conn = get_connection(cloud)
     vms_info = []
 
@@ -64,20 +64,20 @@ def create_vm(name, network_name, config_file=None, cloud="mycloud", allow_scale
 
     user_data = None
     metadata = {}
-    if config_file:
-        with open(config_file, "r") as f:
-            user_data = f.read()
-        # Lưu nội dung script vào metadata để scale_up đọc lại
-        metadata["user_data"] = user_data
+    if config_file and isinstance(config_file, str) and config_file.strip():
+        user_data = config_file
+        metadata["user_data_source"] = "inline_shell"
 
     server = conn.compute.create_server(
         name=name,
         image_id=image.id,
         flavor_id=flavor.id,
         networks=[{"uuid": network.id}],
-        user_data=user_data,
         metadata=metadata
     )
+
+    if user_data:
+        params["user_data"] = user_data
 
     server = conn.compute.wait_for_server(server)
     return server
@@ -128,7 +128,8 @@ def delete_vm(name, cloud="mycloud"):
     # nếu tìm thấy thì xóa VM
     if server:
         # hàm sẽ chờ đến khi VM thực sự bị xóa xong mới trả về
-        conn.compute.delete_server(server, wait=True)
+        conn.compute.delete_server(server)
+        conn.compute.wait_for_delete(server)
         return True
     return False
 
@@ -175,6 +176,25 @@ def add_interface_to_router(router_name, subnet_name, cloud="mycloud"):
     conn.network.add_interface_to_router(router, subnet_id=subnet.id)
 
     return True
+
+def remove_interface_from_router(router_name, subnet_name, cloud="mycloud"):
+    conn = get_connection(cloud)
+
+    # tìm router
+    router = conn.network.find_router(router_name)
+    if not router:
+        raise Exception("Không tìm thấy router!")
+
+    # tìm subnet
+    subnet = conn.network.find_subnet(subnet_name)
+    if not subnet:
+        raise Exception("Không tìm thấy subnet!")
+
+    # gỡ subnet khỏi router
+    conn.network.remove_interface_from_router(router, subnet_id=subnet.id)
+
+    return True
+
 
 def attach_floating_ip(server_name, external_network_name, cloud="mycloud"):
     conn = get_connection(cloud)
