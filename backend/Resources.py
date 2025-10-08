@@ -40,7 +40,7 @@ def list_vms(cloud="mycloud"):
 
     return vms_info
 
-def create_vm(name, network_name, config_file=None, cloud="mycloud", allow_scale=False):
+def create_vm(name, network_name, key_name=None, config_file=None, cloud="mycloud", allow_scale=False):
     conn = get_connection(cloud)
 
     IMAGE_NAME = "CentOS 7"
@@ -73,14 +73,14 @@ def create_vm(name, network_name, config_file=None, cloud="mycloud", allow_scale
         image_id=image.id,
         flavor_id=flavor.id,
         networks=[{"uuid": network.id}],
-        metadata=metadata
+        key_name=key_name,  # <-- thêm dòng này
+        metadata=metadata,
+        user_data=user_data
     )
-
-    if user_data:
-        params["user_data"] = user_data
 
     server = conn.compute.wait_for_server(server)
     return server
+
 
 
 

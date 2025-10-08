@@ -10,6 +10,7 @@ app = FastAPI(title="OpenStack VM API")
 class CreateVMRequest(BaseModel):
     name: str
     network_name: str
+    key_name: str
     config_file: str = None
     cloud: str = "mycloud"
 
@@ -67,6 +68,7 @@ def api_create_vm(req: CreateVMRequest):
     server = Resources.create_vm(
         name=req.name,
         network_name=req.network_name,
+        key_name=req.key_name,
         config_file=req.config_file,
         cloud=req.cloud
     )
