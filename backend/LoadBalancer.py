@@ -1,4 +1,5 @@
 import requests
+import time
 from Identity import get_token_and_catalog, get_endpoint
 import Network
 
@@ -113,14 +114,47 @@ def delete_lb(lb_name):
     headers, body = get_headers()
     lb_url = get_endpoint(body["token"]["catalog"], "load-balancer")
 
+    # Lấy danh sách LB
     lbs_resp = requests.get(f"{lb_url}/v2.0/lbaas/loadbalancers", headers=headers)
     if lbs_resp.status_code != 200:
-        print(f"❌ Lỗi khi lấy danh sách Load Balancer: {lbs_resp.status_code} {lbs_resp.text}")
-        return None
+        print(f"❌ Lỗi khi lấy danh sách LB: {lbs_resp.status_code}")
+        return False
 
     lbs = lbs_resp.json().get("loadbalancers", [])
     lb = next((l for l in lbs if l["name"] == lb_name), None)
     if not lb:
-        print(f"❌ Không tìm thấy Load Balancer '{lb_name}'")
-        return
+        print(f"⚠️ Không tìm thấy LB '{lb_name}'")
+        return False
 
+    lb_id = lb["id"]
+
+    # Xóa tất cả listeners
+    listeners_resp = requests.get(f"{lb_url}/v2.0/lbaas/listeners", headers=headers)
+    if listeners_resp.status_code == 200:
+        for listener in [l for l in listeners_resp.json().get("listeners", []) if l["loadbalancer_id"] == lb_id]:
+            requests.delete(f"{lb_url}/v2.0/lbaas/listeners/{listener['id']}", headers=headers)
+            print(f"🗑️ Đã xóa Listener {listener['name']}")
+
+    # Xóa tất cả pools
+    pools_resp = requests.get(f"{lb_url}/v2.0/lbaas/pools", headers=headers)
+    if pools_resp.status_code == 200:
+        for pool in [p for p in pools_resp.json().get("pools", []) if p["loadbalancer_id"] == lb_id]:
+            requests.delete(f"{lb_url}/v2.0/lbaas/pools/{pool['id']}", headers=headers)
+            print(f"🗑️ Đã xóa Pool {pool['name']}")
+
+    # Xóa LB
+    del_resp = requests.delete(f"{lb_url}/v2.0/lbaas/loadbalancers/{lb_id}", headers=headers)
+    if del_resp.status_code not in [200, 202, 204]:
+        print(f"❌ Lỗi xóa LB: {del_resp.status_code} {del_resp.text}")
+        return False
+
+    # Polling chờ LB thực sự bị xóa
+    for _ in range(10):
+        time.sleep(2)
+        check_resp = requests.get(f"{lb_url}/v2.0/lbaas/loadbalancers/{lb_id}", headers=headers)
+        if check_resp.status_code == 404:
+            print(f"✅ LB '{lb_name}' đã xóa thành công")
+            return True
+
+    print(f"⚠️ LB '{lb_name}' chưa xóa xong, hãy thử lại sau")
+    return False
