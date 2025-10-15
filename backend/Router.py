@@ -104,10 +104,6 @@ def add_interface(router_name, subnet_name):
         print(f"❌ Lỗi thêm interface: {resp.status_code} {resp.text}")
         return False
 
-
-# =========================================
-# ❎ 4. Gỡ Interface
-# =========================================
 def remove_interface(router_name, subnet_name):
     headers, body = get_headers()
     network_url = get_endpoint(body["token"]["catalog"], "network")
