@@ -1,12 +1,6 @@
 import requests
 import time
-from Identity import get_token_and_catalog, get_endpoint
-import Network
-
-def get_headers():
-    token, body = get_token_and_catalog()
-    return {"X-Auth-Token": token}, body
-
+from Identity import get_endpoint, get_headers
 
 def create_lb(name, vip_subnet_id, description=None):
     headers, body = get_headers()

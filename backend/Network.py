@@ -1,10 +1,7 @@
 import requests
-from Identity import get_token_and_catalog, get_endpoint
+from Identity import get_endpoint, get_headers
 
 
-def get_headers():
-    token, body = get_token_and_catalog()
-    return {"X-Auth-Token": token}, body
 
 def list_networks():
     headers, body = get_headers()

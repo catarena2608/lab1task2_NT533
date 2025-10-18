@@ -34,7 +34,6 @@ def get_token_and_catalog():
             data = json.load(f)
             if time.time() < data["expires_at"]:
                 print("🔁 Dùng lại token cũ.")
-                # Gọi lại catalog để có danh sách service
                 response = requests.post(AUTH_URL, json=auth_data)
                 body = response.json()
                 return data["token"], body
@@ -64,3 +63,7 @@ def get_endpoint(catalog, service_type, interface="public"):
                 if ep["interface"] == interface:
                     return ep["url"]
     return None
+
+def get_headers():
+    token, body = get_token_and_catalog()
+    return {"X-Auth-Token": token}, body

@@ -1,11 +1,8 @@
 import requests
 import base64
 import time
-from Identity import get_token_and_catalog, get_endpoint
+from Identity import get_token_and_catalog, get_endpoint, get_headers
 
-def get_headers():
-    token, body = get_token_and_catalog()
-    return {"X-Auth-Token": token}, body
 
 def list_instances():
     headers, body = get_headers()
